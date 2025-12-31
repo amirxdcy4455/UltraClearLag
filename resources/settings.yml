@@ -1,0 +1,13 @@
+# UltraClearLag Settings
+
+clear-item-timer: 300 #s
+warning-time: 30 #s
+
+
+clearable-entities:
+  - "item"
+  - "xp_orb"
+
+
+exempt-worlds:
+  - "spawn"
