@@ -6,7 +6,6 @@ warning-time: 30 #s
 
 clearable-entities:
   - "item"
-  - "xp_orb"
 
 
 exempt-worlds:

@@ -7,33 +7,36 @@ namespace Amirxd\ClearLag\Tasks;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use Amirxd\ClearLag\Manage\ClearManager;
+use Amirxd\ClearLag\UltraClearLag;
 
 class ClearItemTask extends Task {
 
     private ClearManager $clearManager;
-    private int $warningCounter = 0;
-    
+    private int $secondsLeft;
+
     public function __construct(ClearManager $clearManager) {
         $this->clearManager = $clearManager;
+        $this->secondsLeft = UltraClearLag::getInstance()->getSettingManager()->getClearItemsTimer() ?? 300;
     }
 
     public function onRun(): void {
-        $plugin = $this->clearManager->plugin;
+        $plugin = UltraClearLag::getInstance();
         $warningTime = $plugin->getSettingManager()->getWarningTime() ?? 30;
+        $clearInterval = $plugin->getSettingManager()->getClearItemsTimer() ?? 300;
         
         
-        if ($this->warningCounter === $warningTime) {
+        if ($this->secondsLeft === $warningTime) {
             $this->broadcastWarning($warningTime);
         }
         
         
-        if ($this->warningCounter >= $warningTime) {
-            $count = $this->clearManager->clearAllItems();
-            $this->broadcastCleared($count);
-            $this->warningCounter = 0;
-        } else {
-            $this->warningCounter++;
+        if ($this->secondsLeft <= 0) {
+            $result = $this->clearManager->DoClear();
+            $this->broadcastCleared($result['items'], $result['entities']);
+            $this->secondsLeft = $clearInterval;
         }
+        
+        $this->secondsLeft--;
     }
     
     private function broadcastWarning(int $time): void {
@@ -41,8 +44,9 @@ class ClearItemTask extends Task {
         Server::getInstance()->broadcastMessage($message);
     }
     
-    private function broadcastCleared(int $count): void {
-        $message = "§a[§6ClearLag§a] §fCleared §e{$count} §fitems!";
+    private function broadcastCleared(int $items, int $entities): void {
+        $total = $items + $entities;
+        $message = "§a[§6ClearLag§a] §fCleared §e{$items} §fitems and §e{$entities} §fentities (§e{$total} §ftotal)!";
         Server::getInstance()->broadcastMessage($message);
     }
 }

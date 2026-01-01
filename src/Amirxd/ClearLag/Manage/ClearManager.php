@@ -9,6 +9,8 @@ use pocketmine\entity\object\ItemEntity;
 use pocketmine\world\World;
 use Amirxd\ClearLag\UltraClearLag;
 use Amirxd\ClearLag\Tasks\ClearItemTask;
+use pocketmine\entity\projectile\Arrow;
+use pocketmine\entity\projectile\Throwable;
 
 class ClearManager {
 
@@ -27,6 +29,16 @@ class ClearManager {
         $this->plugin->getLogger()->info("§7Clear task started (§e{$interval}s§7 interval)");
     }
     
+    public function DoClear(): array {
+        $itemsCleared = $this->clearAllItems();
+        $entitiesCleared = $this->clearAllEntities();
+        
+        return [
+            "items" => $itemsCleared,
+            "entities" => $entitiesCleared,
+            "total" => $itemsCleared + $entitiesCleared
+        ];
+    }
     
     public function clearAllItems(): int {
         $count = 0;
@@ -34,6 +46,7 @@ class ClearManager {
         foreach ($this->getAllWorlds() as $world) {
             foreach ($world->getEntities() as $entity) {
                 if ($entity instanceof ItemEntity) {
+                    if($this->isSafeWorld($entity->getWorld()))continue;
                     $entity->close();
                     $count++;
                 }
@@ -46,19 +59,39 @@ class ClearManager {
     
     public function clearAllEntities(): int {
         $count = 0;
+        $clearableTypes = $this->plugin->getSettingManager()->getClearableEntities();
         
         foreach ($this->getAllWorlds() as $world) {
+            if ($this->isSafeWorld($world)) continue;
+            
             foreach ($world->getEntities() as $entity) {
-                if ($this->shouldClear($entity)) {
-                    if(!$this->isSafeWorld($entity->getWorld())){
-                        $entity->close();
-                        $count++;    
-                    }
+                if ($this->shouldClearEntity($entity, $clearableTypes)) {
+                    $entity->close();
+                    $count++;
                 }
             }
         }
         
         return $count;
+    }
+    
+    private function shouldClearEntity(Entity $entity, array $clearableTypes): bool {
+        foreach ($clearableTypes as $type) {
+            switch ($type) {
+                case "item":
+                    if ($entity instanceof ItemEntity) return true;
+                    break;
+                case "arrow":
+                    if ($entity instanceof Arrow) return true;
+                    break;
+                case "snowball":
+                case "egg":
+                case "ender_pearl":
+                    if ($entity instanceof Throwable) return true;
+                    break;
+            }
+        }
+        return false;
     }
     
     private function isSafeWorld(World $world):bool{
